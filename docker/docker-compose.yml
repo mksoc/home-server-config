@@ -6,7 +6,7 @@ services:
     container_name: duckdns
     restart: unless-stopped
     volumes:
-      - ${HOME}/docker/duckdns/config:/config
+      - ${DOCKER_HOME}/duckdns/config:/config
     environment:
       - TZ=${TZ}
       - PUID=${PUID}
@@ -22,7 +22,7 @@ services:
     ports:
       - 51820:51820/udp
     volumes:
-      - ${HOME}/docker/wireguard/config:/config
+      - ${DOCKER_HOME}/wireguard/config:/config
       - /lib/modules:/lib/modules
     environment:
       - TZ=${TZ}
@@ -49,8 +49,8 @@ services:
       - "80:80/tcp"
       - "443:443/tcp"
     volumes:
-       - '${HOME}/docker/pihole/etc-pihole/:/etc/pihole/'
-       - '${HOME}/docker/pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/'
+       - '${DOCKER_HOME}/pihole/etc-pihole/:/etc/pihole/'
+       - '${DOCKER_HOME}/pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/'
     environment:
       TZ: ${TZ}
       DNS1: 1.1.1.1
@@ -69,7 +69,7 @@ services:
       - "445:445/tcp"
     # network_mode: host # It seems to work also in bridge mode, keeping this line for future needs
     volumes:
-      - ${HOME}/vol/disk0:/mnt
+      - ${MOUNT_VOL}/disk0:/mnt
     environment:
       - TZ=${TZ}
       - SHARE=disk0;/mnt;yes;no;yes;admin
@@ -83,11 +83,11 @@ services:
     restart: unless-stopped
     network_mode: host
     volumes:
-      - ${HOME}/vol/disk0/Media/Musica:/media/Musica
-      - ${HOME}/vol/disk0/Media/Film:/media/Film
-      - ${HOME}/vol/disk0/Media/Serie:/media/Serie
-      - ${HOME}/vol/disk0/Media/Video:/media/Video
-      - ${HOME}/vol/disk0/backup/Filmini:/media/Filmini
+      - ${MOUNT_VOL}/disk0/Media/Musica:/media/Musica
+      - ${MOUNT_VOL}/disk0/Media/Film:/media/Film
+      - ${MOUNT_VOL}/disk0/Media/Serie:/media/Serie
+      - ${MOUNT_VOL}/disk0/Media/Video:/media/Video
+      - ${MOUNT_VOL}/disk0/backup/Filmini:/media/Filmini
     environment:
       - MINIDLNA_FRIENDLY_NAME=red-keep
       - MINIDLNA_MEDIA_DIR_1=A,/media/Musica
@@ -105,8 +105,8 @@ services:
       - "51413:51413/tcp"
       - "51413:51413/udp"
     volumes:
-      - ${HOME}/docker/transmission/config:/config
-      - ${HOME}/vol/disk0/downloads:/downloads
+      - ${DOCKER_HOME}/transmission/config:/config
+      - ${MOUNT_VOL}/disk0/downloads:/downloads
     environment:
       - TZ=${TZ}
       - PUID=${PUID}
@@ -121,24 +121,35 @@ services:
     ports:
       - 8443:443
     volumes:
-      - ${HOME}/docker/nextcloud/config:/config
-      - ${HOME}/vol/disk0/nextcloud:/data
+      - ${DOCKER_HOME}/nextcloud/config:/config
+      - ${MOUNT_VOL}/disk0/nextcloud:/data
     environment:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
 
-  # airsonic:
-  #   image: linuxserver/airsonic
-  #   container_name: airsonic
-  #   restart: unless-stopped
-  #   ports:
-  #     - 4040:4040
-  #   volumes:
-  #     - ${HOME}/docker/airsonic/config:/config
-  #     - ${HOME}/vol/disk0/backup/PAM_Data1_bup/Marco/Musica/Libreria:/music
-  #     - ${HOME}/docker/airsonic/playlists:/playlists
-  #   environment:
-  #     - TZ=${TZ}
-  #     - PUID=${PUID}
-  #     - PGID=${PGID}
+  # Firefly III
+  firefly_app:
+    image: fireflyiii/core:latest
+    container_name: firefly_app
+    restart: always
+    volumes:
+      - ${DOCKER_HOME}/firefly/upload:/var/www/html/storage/upload
+    env_file: firefly.env
+    ports:
+      - 8080:8080
+    depends_on:
+      - firefly_db
+
+  firefly_db:
+    image: mariadb
+    container_name: firefly_db
+    hostname: fireflyiiidb
+    restart: always
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+      - MYSQL_USER=${FIREFLY_USER}
+      - MYSQL_PASSWORD=${FIREFLY_PASSWD}
+      - MYSQL_DATABASE=firefly
+    volumes:
+      - ${DOCKER_HOME}/mariadb/firefly_db:/var/lib/mysql
