@@ -28,9 +28,9 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
+      - PEERS=macbook,iphone
       - SERVERURL=auto
       - SERVERPORT=51820
-      - PEERS=marco-macbook
       - PEERDNS=auto
       # - PEERDNS=192.168.1.2
       - INTERNAL_SUBNET=10.13.13.0
