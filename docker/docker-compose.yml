@@ -1,0 +1,144 @@
+version: "3"
+
+services:
+  duckdns:
+    image: linuxserver/duckdns
+    container_name: duckdns
+    restart: unless-stopped
+    volumes:
+      - ${HOME}/docker/duckdns/config:/config
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - SUBDOMAINS=${SUB}
+      - TOKEN=${DUCK_TOKEN}
+      - LOG_FILE=true
+
+  wireguard:
+    image: linuxserver/wireguard
+    container_name: wireguard
+    restart: unless-stopped
+    ports:
+      - 51820:51820/udp
+    volumes:
+      - ${HOME}/docker/wireguard/config:/config
+      - /lib/modules:/lib/modules
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - SERVERURL=auto
+      - SERVERPORT=51820
+      - PEERS=marco-macbook
+      - PEERDNS=auto
+      # - PEERDNS=192.168.1.2
+      - INTERNAL_SUBNET=10.13.13.0
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    hostname: pihole
+    ports:
+      - "53:53/tcp"
+      - "192.168.1.2:53:53/udp"
+      - "80:80/tcp"
+      - "443:443/tcp"
+    volumes:
+       - '${HOME}/docker/pihole/etc-pihole/:/etc/pihole/'
+       - '${HOME}/docker/pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/'
+    environment:
+      TZ: ${TZ}
+      DNS1: 1.1.1.1
+      DNS2: 1.0.0.1
+      WEBPASSWORD: ${PI_PASSWD}
+    dns:
+      - 127.0.0.1
+      - 1.1.1.1
+
+  samba:
+    image: dperson/samba
+    container_name: samba
+    restart: unless-stopped
+    ports:
+      - "139:139/tcp"
+      - "445:445/tcp"
+    # network_mode: host # It seems to work also in bridge mode, keeping this line for future needs
+    volumes:
+      - ${HOME}/vol/disk0:/mnt
+    environment:
+      - TZ=${TZ}
+      - SHARE=disk0;/mnt;yes;no;yes;admin
+      - USER=admin;${SMB_PASSWD}
+      - USERID=${PUID}
+      - GROUPID=${PGID}
+
+  minidlna:
+    image: vladgh/minidlna
+    container_name: minidlna
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ${HOME}/vol/disk0/Media/Musica:/media/Musica
+      - ${HOME}/vol/disk0/Media/Film:/media/Film
+      - ${HOME}/vol/disk0/Media/Serie:/media/Serie
+      - ${HOME}/vol/disk0/Media/Video:/media/Video
+      - ${HOME}/vol/disk0/backup/Filmini:/media/Filmini
+    environment:
+      - MINIDLNA_FRIENDLY_NAME=red-keep
+      - MINIDLNA_MEDIA_DIR_1=A,/media/Musica
+      - MINIDLNA_MEDIA_DIR_2=V,/media/Film
+      - MINIDLNA_MEDIA_DIR_3=V,/media/Serie
+      - MINIDLNA_MEDIA_DIR_4=V,/media/Video
+      - MINIDLNA_MEDIA_DIR_5=V,/media/Filmini
+
+  transmission:
+    image: linuxserver/transmission
+    container_name: transmission
+    restart: unless-stopped
+    ports:
+      - "9091:9091/tcp"
+      - "51413:51413/tcp"
+      - "51413:51413/udp"
+    volumes:
+      - ${HOME}/docker/transmission/config:/config
+      - ${HOME}/vol/disk0/downloads:/downloads
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - USER=transmission
+      - PASS=${TRANS_PASSWD}
+
+  nextcloud:
+    image: linuxserver/nextcloud
+    container_name: nextcloud
+    restart: unless-stopped
+    ports:
+      - 8443:443
+    volumes:
+      - ${HOME}/docker/nextcloud/config:/config
+      - ${HOME}/vol/disk0/nextcloud:/data
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+
+  # airsonic:
+  #   image: linuxserver/airsonic
+  #   container_name: airsonic
+  #   restart: unless-stopped
+  #   ports:
+  #     - 4040:4040
+  #   volumes:
+  #     - ${HOME}/docker/airsonic/config:/config
+  #     - ${HOME}/vol/disk0/backup/PAM_Data1_bup/Marco/Musica/Libreria:/music
+  #     - ${HOME}/docker/airsonic/playlists:/playlists
+  #   environment:
+  #     - TZ=${TZ}
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
